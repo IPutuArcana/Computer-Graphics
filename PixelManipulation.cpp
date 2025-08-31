@@ -1,7 +1,14 @@
 #include <iostream>
+#include <vector>
 #include <X11/Xlib.h>
 
 using namespace std;
+
+struct Line
+{
+    int x1, y1, x2, y2;
+};
+
 
 int main()
 {
@@ -9,6 +16,7 @@ int main()
     Window window;
     XEvent event;
     GC gc;
+    vector<Line> lines;
 
     display = XOpenDisplay(NULL);
     if(display == NULL)
@@ -43,7 +51,9 @@ int main()
         XNextEvent(display, &event);
         if(event.type == Expose)
         {
-           
+           for (const auto& line : lines) {
+                XDrawLine(display, window, gc, line.x1, line.y1, line.x2, line.y2);
+            }
         }
 
         if(event.type == ButtonPress)
@@ -61,6 +71,7 @@ int main()
                 end_y = event.xbutton.y;
                 cout<<"End Point: ("<<end_x<<", "<<end_y<<")"<<endl;
                 XDrawLine(display, window, gc, start_x, start_y, end_x, end_y);
+                lines.push_back({start_x, start_y, end_x, end_y});
                 has_start_point = false;
             }
         }
