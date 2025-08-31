@@ -1,15 +1,17 @@
-#include<iostream>
-#include<X11/Xlib.h>
+#include <iostream>
+#include <X11/Xlib.h>
 
 using namespace std;
 
-int main(){
+int main()
+{
     Display *display;
     Window window;
     XEvent event;
 
     display = XOpenDisplay(NULL);
-    if(display == NULL){
+    if(display == NULL)
+    {
         cerr<<"display nya KOSONG BROOOO"<<endl;
         return 1;
     }
@@ -22,9 +24,21 @@ int main(){
 
     XMapWindow(display, window);
     
+    while(1)
+    {
+        XNextEvent(display, &event);
+        if(event.type == ClientMessage)
+        {
+            if((Atom)event.xclient.data.l[0] == delWindow)
+            {
+                break;
+            }
+        }
+    }
 
     cout<<"KELAS JALAN BROOO"<< endl;
 
+    XDestroyWindow(display, window);
     XCloseDisplay(display);
 
     return 0;
