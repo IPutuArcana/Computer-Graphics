@@ -73,159 +73,108 @@ int main()
     Window window;
     XEvent event;
     GC gc;
-    vector<Line> lines;
+    vector<Line> lines; // For the line drawing feature
 
+    // --- X11 Setup (this is all correct) ---
     display = XOpenDisplay(NULL);
-    if(display == NULL)
-    {
-        cerr<<"display nya KOSONG BROOOO"<<endl;
+    if(display == NULL) {
+        cerr << "Cannot open display" << endl;
         return 1;
     }
-
     int screen = DefaultScreen(display);
-    window = XCreateSimpleWindow(
-                                display,
-                                RootWindow(display, screen),
+    window = XCreateSimpleWindow(display, RootWindow(display, screen),
                                 10, 10, 400, 400, 1,
-                                BlackPixel(display, screen),
-                                WhitePixel(display, screen));
-    
+                                BlackPixel(display, screen), WhitePixel(display, screen));
     Atom delWindow = XInternAtom(display, "WM_DELETE_WINDOW", 0);
     XSetWMProtocols(display, window, &delWindow, 1);
-
     XSelectInput(display, window, ExposureMask | StructureNotifyMask | ButtonPressMask);
-
     gc = XCreateGC(display, window, 0, NULL);
     XSetForeground(display, gc, BlackPixel(display, screen));
-
     XMapWindow(display, window);
 
+    // --- Line Drawing Variables ---
     bool has_start_point = false;
-    int start_x, start_y, end_x, end_y;
-    
-    // rotation variables
+    int start_x, start_y;
+
+    // --- Animation variables (now all together) ---
     float angle = 0.0f;
-    cube_x += cube_dx;
-    cube_y += cube_dy;
-
-    // --- Random Number Setup ---
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<> distrib(1, 100); // For timing the change
-    uniform_int_distribution<> dir_distrib(-1, 1); // For picking a new direction
-
+    int cube_x = 200;
+    int cube_y = 200;
+    int cube_dx = 1;
+    int cube_dy = 1;
     bool running = true;
 
+    // --- Main Animation Loop ---
     while(running)
     {
+        // Handle input events
         while(XPending(display))
         {
             XNextEvent(display, &event);
-            // if(event.type == Expose)
-            // {
-            //    for (const auto& line : lines) {
-            //        XDrawLine(display, window, gc, line.x1, line.y1, line.x2, line.y2);
-            //    }
-            // }
-
-            if(event.type == ButtonPress)
-            {
-                if(!has_start_point)
-                {
+            if(event.type == ButtonPress) {
+                if(!has_start_point) {
                     start_x = event.xbutton.x;
                     start_y = event.xbutton.y;
-                    cout<<"Start Point: ("<<start_x<<", "<<start_y<<")"<<endl;
                     has_start_point = true;
-                }
-                else
-                {
-                    end_x = event.xbutton.x;
-                    end_y = event.xbutton.y;
-                    cout<<"End Point: ("<<end_x<<", "<<end_y<<")"<<endl;
-                    XDrawLine(display, window, gc, start_x, start_y, end_x, end_y);
+                } else {
+                    int end_x = event.xbutton.x;
+                    int end_y = event.xbutton.y;
                     lines.push_back({start_x, start_y, end_x, end_y});
                     has_start_point = false;
                 }
             }
-
-            if(event.type == ClientMessage)
-            {
-                if((Atom)event.xclient.data.l[0] == delWindow)
-                {
+            if(event.type == ClientMessage) {
+                if((Atom)event.xclient.data.l[0] == delWindow) {
                     running = false;
                 }
             }
         }
+
+        // --- Drawing and Animation Logic ---
         XClearWindow(display, window);
 
+        // Redraw user-drawn lines
         for (const auto& line : lines) {
             XDrawLine(display, window, gc, line.x1, line.y1, line.x2, line.y2);
         }
 
-                // ADD THIS NEW BLOCK
-        // --- 3D Animation Logic ---
-        angle += 0.01f; // Slowly increase the rotation angle
+        // 1. Update rotation and position
+        angle += 0.015f; // A little faster
+        cube_x += cube_dx;
+        cube_y += cube_dy;
 
-                // --- New Tapered 3D Drawing Logic ---
-        // Loop through each VERTEX using an index 'i'
-        for (size_t i = 0; i < rayquaza_spine_vertices.size(); ++i) {
-            const auto& vertex = rayquaza_spine_vertices[i];
-
-            // ... (The rotation and projection logic is exactly the same as before)
-            float rotated_x = vertex.x * std::cos(angle) - vertex.z * std::sin(angle);
-            float rotated_y = vertex.y;
-            float rotated_z = vertex.x * std::sin(angle) + vertex.z * std::cos(angle);
-            int screen_x = static_cast<int>(rotated_x + 200);
-            int screen_y = static_cast<int>(rotated_y + 200);
-
-            // --- Calculate Dynamic Thickness ---
-            // Calculate how far along the body we are (from 0.0 to 1.0)
-            float progress = static_cast<float>(i) / (rayquaza_spine_vertices.size() - 1);
-            // Use the sin function to make the thickness swell in the middle
-            float sin_wave = std::sin(progress * 3.14159f); // M_PI is ~3.14
-            int tube_thickness = 10 + static_cast<int>(sin_wave * 20); // Base 10px, swells up to 30px
-
-            // Draw a filled square with the new dynamic thickness
-            XFillRectangle(display, window, gc,
-                        screen_x - tube_thickness / 2,
-                        screen_y - tube_thickness / 2,
-                        tube_thickness, tube_thickness);
+        // 2. Boundary Checking for bouncing
+        if (cube_x <= 20 || cube_x >= 380) { // 400 - 20 (half cube size)
+            cube_dx *= -1;
+        }
+        if (cube_y <= 20 || cube_y >= 380) { // 400 - 20 (half cube size)
+            cube_dy *= -1;
         }
 
-                // 3. Draw the cube
-        // Loop through all the EDGES of our model
+        // 3. Draw the rotating cube at its new position
         for (const auto& edge : cube_edges) {
-            // Get the two 3D points for this edge
             Point3D p1 = cube_vertices[edge.first];
             Point3D p2 = cube_vertices[edge.second];
 
-            // Rotate point 1
             float p1_rotated_x = p1.x * std::cos(angle) - p1.z * std::sin(angle);
             float p1_rotated_y = p1.y;
-            
-            // Rotate point 2
             float p2_rotated_x = p2.x * std::cos(angle) - p2.z * std::sin(angle);
             float p2_rotated_y = p2.y;
 
-            // Project and translate the two rotated points to the screen
-            // This is the key step: we add cube_x and cube_y here
             int p1_screen_x = static_cast<int>(p1_rotated_x + cube_x);
             int p1_screen_y = static_cast<int>(p1_rotated_y + cube_y);
-
             int p2_screen_x = static_cast<int>(p2_rotated_x + cube_x);
             int p2_screen_y = static_cast<int>(p2_rotated_y + cube_y);
 
-            // Draw the 2D line that represents the 3D edge
             XDrawLine(display, window, gc, p1_screen_x, p1_screen_y, p2_screen_x, p2_screen_y);
         }
-        
-        XFlush(display);
 
-        usleep(16667); // Delay for 16.67 milliseconds
+        XFlush(display);
+        usleep(16667);
     }
 
-    cout<<"KELAS JALAN BROOO"<< endl;
-
+    // --- Cleanup ---
+    cout << "Closing window." << endl;
     XFreeGC(display, gc);
     XDestroyWindow(display, window);
     XCloseDisplay(display);
