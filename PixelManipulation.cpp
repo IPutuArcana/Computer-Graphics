@@ -2,6 +2,8 @@
 #include <vector>
 #include <unistd.h>
 #include <X11/Xlib.h>
+#include <cmath>
+#include <utility>
 
 using namespace std;
 
@@ -9,6 +11,33 @@ struct Line
 {
     int x1, y1, x2, y2;
 };
+
+struct Point3D
+{
+    float x, y, z;
+};
+
+   std::vector<Point3D> rayquaza_spine_vertices = 
+    {
+        {  0,   0,   0}, { 20,   5, -10}, { 30,  15, -20},
+        { 25,  30, -30}, { 10,  40, -40}, {-10,  35, -50},
+        {-20,  20, -60}, {-15,   5, -70}, {  0,   0, -80},
+        { 10,  -5, -90}, { 20, -10, -100}, { 15, -20, -110},
+        {  0, -25, -120}, {-10, -20, -130}, {-20, -15, -140}
+    };
+
+// Defines the edges connecting the vertices
+    vector<pair<int, int>> rayquaza_spine_edges;
+
+class EdgeBuilder {
+public:
+    EdgeBuilder() {
+        for (size_t i = 0; i < rayquaza_spine_vertices.size() - 1; ++i) {
+            rayquaza_spine_edges.push_back({static_cast<int>(i), static_cast<int>(i + 1)});
+        }
+    }
+};
+EdgeBuilder edge_builder;
 
 
 int main()
@@ -18,18 +47,6 @@ int main()
     XEvent event;
     GC gc;
     vector<Line> lines;
-
-    const int SPRITE_WIDTH = 5;
-    const int SPRITE_HEIGHT = 5;
-
-    // 1 = draw a pixel, 0 = empty space
-    int sprite_data[SPRITE_HEIGHT][SPRITE_WIDTH] = {
-        {0, 0, 1, 0, 0},
-        {0, 1, 1, 1, 0},
-        {1, 0, 1, 0, 1},
-        {0, 0, 1, 0, 0},
-        {0, 0, 1, 0, 0}
-};
 
     display = XOpenDisplay(NULL);
     if(display == NULL)
@@ -59,9 +76,9 @@ int main()
     bool has_start_point = false;
     int start_x, start_y, end_x, end_y;
     
-    // Animation variables
-    int square_x = 195; 
-    int square_y = 195;
+    // rotation variables
+    float angle = 0.0f;
+
     int dx = 1; //direction x
     bool running = true;
 
@@ -111,23 +128,34 @@ int main()
             XDrawLine(display, window, gc, line.x1, line.y1, line.x2, line.y2);
         }
 
-        square_x += dx;
-        if(square_x <= 0 || square_x >= 390) // Bounce off the walls
-        {
-            dx = -dx;
-        }
+                // ADD THIS NEW BLOCK
+        // --- 3D Animation Logic ---
+        angle += 0.01f; // Slowly increase the rotation angle
 
-        // Outer loop for the rows (y)
-        for (int y = 0; y < SPRITE_HEIGHT; y++) 
-        {
-            // Inner loop for the columns (x)
-            for (int x = 0; x < SPRITE_WIDTH; x++) {
-                // Check if the sprite data at this position is a 1
-                if (sprite_data[y][x] == 1) {
-                    // If it is, draw a point at the correct screen location
-                    XDrawPoint(display, window, gc, square_x + x, square_y + y);
-                }
-            }
+        // Loop through all the EDGES of our model
+        for (const auto& edge : rayquaza_spine_edges) {
+            // Get the two 3D points for this edge
+            Point3D p1 = rayquaza_spine_vertices[edge.first];
+            Point3D p2 = rayquaza_spine_vertices[edge.second];
+
+            // Rotate point 1 around the Y-axis
+            float p1_rotated_x = p1.x * std::cos(angle) - p1.z * std::sin(angle);
+            float p1_rotated_z = p1.x * std::sin(angle) + p1.z * std::cos(angle);
+
+            // Rotate point 2 around the Y-axis
+            float p2_rotated_x = p2.x * std::cos(angle) - p2.z * std::sin(angle);
+            float p2_rotated_z = p2.x * std::sin(angle) + p2.z * std::cos(angle);
+
+            // Project the two rotated 3D points to 2D screen coordinates
+            // (We add 200 to center the drawing in our 400x400 window)
+            int p1_screen_x = static_cast<int>(p1_rotated_x + 200);
+            int p1_screen_y = static_cast<int>(p1.y + 200);
+
+            int p2_screen_x = static_cast<int>(p2_rotated_x + 200);
+            int p2_screen_y = static_cast<int>(p2.y + 200);
+
+            // Draw the 2D line that represents the 3D edge
+            XDrawLine(display, window, gc, p1_screen_x, p1_screen_y, p2_screen_x, p2_screen_y);
         }
         
         XFlush(display);
