@@ -115,11 +115,13 @@ int main()
                 if(!has_start_point) {
                     start_x = event.xbutton.x;
                     start_y = event.xbutton.y;
+                    cout << "Start Point: (" << start_x << ", " << start_y << ")" << endl;
                     has_start_point = true;
                 } else {
                     int end_x = event.xbutton.x;
                     int end_y = event.xbutton.y;
                     lines.push_back({start_x, start_y, end_x, end_y});
+                    cout << "End Point: (" << end_x << ", " << end_y << ")" << endl;
                     has_start_point = false;
                 }
             }
