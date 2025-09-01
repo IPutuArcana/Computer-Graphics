@@ -39,6 +39,12 @@ public:
 };
 EdgeBuilder edge_builder;
 
+// circle drawing function
+void drawCircle(Display *display, Window window, GC gc, int centerX, int centerY, int radius)
+{
+    
+}
+
 
 int main()
 {
@@ -132,30 +138,24 @@ int main()
         // --- 3D Animation Logic ---
         angle += 0.01f; // Slowly increase the rotation angle
 
-        // Loop through all the EDGES of our model
-        for (const auto& edge : rayquaza_spine_edges) {
-            // Get the two 3D points for this edge
-            Point3D p1 = rayquaza_spine_vertices[edge.first];
-            Point3D p2 = rayquaza_spine_vertices[edge.second];
+                // --- New 3D Drawing Logic ---
+        // Loop through each VERTEX of our model
+        for (const auto& vertex : rayquaza_spine_vertices) {
+            // Rotate the 3D point around the Y-axis
+            float rotated_x = vertex.x * std::cos(angle) - vertex.z * std::sin(angle);
+            float rotated_y = vertex.y; // Keep y the same for now
+            float rotated_z = vertex.x * std::sin(angle) + vertex.z * std::cos(angle);
 
-            // Rotate point 1 around the Y-axis
-            float p1_rotated_x = p1.x * std::cos(angle) - p1.z * std::sin(angle);
-            float p1_rotated_z = p1.x * std::sin(angle) + p1.z * std::cos(angle);
+            // Project the rotated 3D point to a 2D screen coordinate
+            int screen_x = static_cast<int>(rotated_x + 200);
+            int screen_y = static_cast<int>(rotated_y + 200);
 
-            // Rotate point 2 around the Y-axis
-            float p2_rotated_x = p2.x * std::cos(angle) - p2.z * std::sin(angle);
-            float p2_rotated_z = p2.x * std::sin(angle) + p2.z * std::cos(angle);
-
-            // Project the two rotated 3D points to 2D screen coordinates
-            // (We add 200 to center the drawing in our 400x400 window)
-            int p1_screen_x = static_cast<int>(p1_rotated_x + 200);
-            int p1_screen_y = static_cast<int>(p1.y + 200);
-
-            int p2_screen_x = static_cast<int>(p2_rotated_x + 200);
-            int p2_screen_y = static_cast<int>(p2.y + 200);
-
-            // Draw the 2D line that represents the 3D edge
-            XDrawLine(display, window, gc, p1_screen_x, p1_screen_y, p2_screen_x, p2_screen_y);
+            // Draw a filled square at that 2D point to create the "tube"
+            int tube_thickness = 20;
+            XFillRectangle(display, window, gc,
+                        screen_x - tube_thickness / 2,
+                        screen_y - tube_thickness / 2,
+                        tube_thickness, tube_thickness);
         }
         
         XFlush(display);
