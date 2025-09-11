@@ -37,7 +37,7 @@ const vector<pair<int, int>> cube_edges = {
     {0, 4}, {1, 5}, {2, 6}, {3, 7}  // Sides
 };
 
-// Example Rayquaza spine (currently unused)
+// Rayquaza spine
 const vector<Point3D> rayquaza_spine_vertices = {
     {  0,   0,   0}, { 20,   5, -10}, { 30,  15, -20},
     { 25,  30, -30}, { 10,  40, -40}, {-10,  35, -50},
@@ -45,13 +45,38 @@ const vector<Point3D> rayquaza_spine_vertices = {
     { 10,  -5, -90}, { 20, -10, -100}, { 15, -20, -110},
     {  0, -25, -120}, {-10, -20, -130}, {-20, -15, -140}
 };
-
 const vector<pair<int, int>> rayquaza_spine_edges =
     EdgeBuilder::build(rayquaza_spine_vertices);
 
 // Circle drawing function (placeholder)
 void drawCircle(Display* display, Window window, GC gc, int centerX, int centerY, int radius) {
-    // TODO: implement Bresenham / Midpoint circle if needed
+    // TODO: implement if needed
+}
+
+// General 3D wireframe drawing
+void drawEdges(Display* display, Window window, GC gc,
+               const vector<Point3D>& vertices,
+               const vector<pair<int, int>>& edges,
+               float angle, int posX, int posY) {
+    for (const auto& edge : edges) {
+        Point3D p1 = vertices[edge.first];
+        Point3D p2 = vertices[edge.second];
+
+        // simple rotation (XZ plane)
+        float p1_rot_x = p1.x * cos(angle) - p1.z * sin(angle);
+        float p1_rot_y = p1.y;
+        float p2_rot_x = p2.x * cos(angle) - p2.z * sin(angle);
+        float p2_rot_y = p2.y;
+
+        int p1_screen_x = static_cast<int>(p1_rot_x + posX);
+        int p1_screen_y = static_cast<int>(p1_rot_y + posY);
+        int p2_screen_x = static_cast<int>(p2_rot_x + posX);
+        int p2_screen_y = static_cast<int>(p2_rot_y + posY);
+
+        XDrawLine(display, window, gc,
+                  p1_screen_x, p1_screen_y,
+                  p2_screen_x, p2_screen_y);
+    }
 }
 
 int main() {
@@ -63,7 +88,7 @@ int main() {
     }
     int screen = DefaultScreen(display);
     Window window = XCreateSimpleWindow(display, RootWindow(display, screen),
-                                        10, 10, 400, 400, 1,
+                                        10, 10, 600, 600, 1,
                                         BlackPixel(display, screen), WhitePixel(display, screen));
     Atom delWindow = XInternAtom(display, "WM_DELETE_WINDOW", 0);
     XSetWMProtocols(display, window, &delWindow, 1);
@@ -78,8 +103,8 @@ int main() {
     int start_x = 0, start_y = 0;
 
     float angle = 0.0f;
-    int cube_x = 200, cube_y = 200;
-    int cube_dx = 1, cube_dy = 1;
+    int cube_x = 200, cube_y = 200, cube_dx = 1, cube_dy = 1;
+    int spine_x = 400, spine_y = 300; // static Rayquaza spine position
     bool running = true;
 
     // --- Main Loop ---
@@ -93,14 +118,14 @@ int main() {
                 if (!has_start_point) {
                     start_x = event.xbutton.x;
                     start_y = event.xbutton.y;
-                    cout << "Start Point: (" << start_x << ", " << start_y << ")" << endl;
                     has_start_point = true;
+                    cout << "Start point set at (" << start_x << ", " << start_y << ")\n";
                 } else {
                     int end_x = event.xbutton.x;
                     int end_y = event.xbutton.y;
                     user_lines.push_back({start_x, start_y, end_x, end_y});
-                    cout << "End Point: (" << end_x << ", " << end_y << ")" << endl;
                     has_start_point = false;
+                    cout << "End point set at (" << end_x << ", " << end_y << ")\n";
                 }
             }
             if (event.type == ClientMessage &&
@@ -122,34 +147,21 @@ int main() {
         cube_x += cube_dx;
         cube_y += cube_dy;
 
-        if (cube_x <= 20 || cube_x >= 380) cube_dx *= -1;
-        if (cube_y <= 20 || cube_y >= 380) cube_dy *= -1;
+        if (cube_x <= 40 || cube_x >= 560) cube_dx *= -1;
+        if (cube_y <= 40 || cube_y >= 560) cube_dy *= -1;
 
-        // Draw cube
-        for (const auto& edge : cube_edges) {
-            Point3D p1 = cube_vertices[edge.first];
-            Point3D p2 = cube_vertices[edge.second];
+        // Draw cube (moving + rotating)
+        drawEdges(display, window, gc, cube_vertices, cube_edges, angle, cube_x, cube_y);
 
-            float p1_rot_x = p1.x * cos(angle) - p1.z * sin(angle);
-            float p1_rot_y = p1.y;
-            float p2_rot_x = p2.x * cos(angle) - p2.z * sin(angle);
-            float p2_rot_y = p2.y;
-
-            int p1_screen_x = static_cast<int>(p1_rot_x + cube_x);
-            int p1_screen_y = static_cast<int>(p1_rot_y + cube_y);
-            int p2_screen_x = static_cast<int>(p2_rot_x + cube_x);
-            int p2_screen_y = static_cast<int>(p2_rot_y + cube_y);
-
-            XDrawLine(display, window, gc, p1_screen_x, p1_screen_y,
-                      p2_screen_x, p2_screen_y);
-        }
+        // Draw Rayquaza spine (rotating in place)
+        drawEdges(display, window, gc, rayquaza_spine_vertices, rayquaza_spine_edges,
+                  -angle * 0.5f, spine_x, spine_y);
 
         XFlush(display);
         usleep(16667); // ~60fps
     }
 
     // Cleanup
-    cout << "Closing window." << endl;
     XFreeGC(display, gc);
     XDestroyWindow(display, window);
     XCloseDisplay(display);
