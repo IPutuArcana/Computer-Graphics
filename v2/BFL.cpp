@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+using namespace std;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -22,19 +23,19 @@ void drawPixel(unsigned char* data, int width, int height, int channels, int x, 
 }
 
 void lineBruteForce(unsigned char* data, int width, int height, int channels, int x1, int y1, int x2, int y2, unsigned char r, unsigned char g, unsigned char b) {
-    bool steep = std::abs(y2 - y1) > std::abs(x2 - x1);
+    bool steep = abs(y2 - y1) > abs(x2 - x1);
     if (steep) {
-        std::swap(x1, y1);
-        std::swap(x2, y2);
+        swap(x1, y1);
+        swap(x2, y2);
     }
     if (x1 > x2) {
-        std::swap(x1, x2);
-        std::swap(y1, y2);
+        swap(x1, x2);
+        swap(y1, y2);
     }
 
     if (x1 == x2) {
-        int startY = std::min(y1, y2);
-        int endY = std::max(y1, y2);
+        int startY = min(y1, y2);
+        int endY = max(y1, y2);
         for (int y = startY; y <= endY; ++y) {
             if (steep) {
                 drawPixel(data, width, height, channels, y, x1, r, g, b);
@@ -68,33 +69,33 @@ int main() {
     unsigned char *img = stbi_load(inputFilename, &width, &height, &channels, 0);
 
     if (img == nullptr) {
-        std::cerr << "Error: Could not load image '" << inputFilename << "'." << std::endl;
+        cerr << "Error: Could not load image '" << inputFilename << "'." << endl;
         return 1;
     }
 
     // **** INI ADALAH BARIS YANG DITAMBAHKAN ****
-    std::cout << "Gambar berhasil dimuat! Ukuran: " << width << " x " << height << " piksel." << std::endl;
+    cout << "Gambar berhasil dimuat! Ukuran: " << width << " x " << height << " piksel." << endl;
 
     int x1, y1, x2, y2;
 
-    std::cout << "Program Menggambar Garis pada Gambar" << std::endl;
-    std::cout << "Koordinat (0,0) ada di pojok kiri atas." << std::endl;
-    
-    std::cout << "Masukkan koordinat titik pertama (x1 y1): ";
-    std::cin >> x1 >> y1;
+    cout << "Program Menggambar Garis pada Gambar" << endl;
+    cout << "Koordinat (0,0) ada di pojok kiri atas." << endl;
 
-    std::cout << "Masukkan koordinat titik kedua (x2 y2): ";
-    std::cin >> x2 >> y2;
+    cout << "Masukkan koordinat titik pertama (x1 y1): ";
+    cin >> x1 >> y1;
+
+    cout << "Masukkan koordinat titik kedua (x2 y2): ";
+    cin >> x2 >> y2;
 
     unsigned char r = 255, g = 0, b = 0; // Warna merah
-    std::cout << "Menggambar garis merah..." << std::endl;
+    cout << "Menggambar garis merah..." << endl;
 
     lineBruteForce(img, width, height, channels, x1, y1, x2, y2, r, g, b);
 
     if (stbi_write_png(outputFilename, width, height, channels, img, width * channels) == 0) {
-        std::cerr << "Error: Could not save image to '" << outputFilename << "'." << std::endl;
+        cerr << "Error: Could not save image to '" << outputFilename << "'." << endl;
     } else {
-        std::cout << "Garis berhasil digambar! Gambar disimpan sebagai '" << outputFilename << "'." << std::endl;
+        cout << "Garis berhasil digambar! Gambar disimpan sebagai '" << outputFilename << "'." << endl;
     }
 
     stbi_image_free(img);
