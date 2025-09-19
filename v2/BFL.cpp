@@ -60,7 +60,7 @@ void lineBruteForce(unsigned char* data, int width, int height, int channels, in
 }
 
 int main() {
-    // Ganti "input.png" menjadi "INTP.jpg"
+    // input "INTP.jpg"
     const char* inputFilename = "INTP.jpg";
     const char* outputFilename = "output_line.png";
 
