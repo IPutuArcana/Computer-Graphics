@@ -23,7 +23,8 @@ void drawPixel(unsigned char* data, int width, int height, int channels, int x, 
 }
 
 void lineBruteForce(unsigned char* data, int width, int height, int channels, int x1, int y1, int x2, int y2, unsigned char r, unsigned char g, unsigned char b) {
-    bool steep = abs(y2 - y1) > abs(x2 - x1);
+    // cek agar gk diabgi 0
+    bool steep = abs(y2 - y1) > abs(x2 - x1); 
     if (steep) {
         swap(x1, y1);
         swap(x2, y2);
