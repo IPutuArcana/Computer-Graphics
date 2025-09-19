@@ -50,7 +50,7 @@ const vector<pair<int, int>> rayquaza_spine_edges =
 
 // Circle drawing function (placeholder)
 void drawCircle(Display* display, Window window, GC gc, int centerX, int centerY, int radius) {
-    // TODO: implement if needed
+    // TODO
 }
 
 // General 3D wireframe drawing
