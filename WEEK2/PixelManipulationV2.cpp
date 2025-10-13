@@ -4,7 +4,6 @@
 #include <X11/Xlib.h>
 #include <cmath>
 #include <utility>
-#include <algorithm> // For std::swap
 
 using namespace std;
 
@@ -44,56 +43,53 @@ const vector<Point3D> rayquaza_spine_vertices = {
 const vector<pair<int, int>> rayquaza_spine_edges = EdgeBuilder::build(rayquaza_spine_vertices);
 
 
-// --- NEW: Brute-Force Line Drawing Algorithm ---
-// This function draws a line pixel by pixel using the equation y = mx + c.
+// --- REVISED: Flexible Brute-Force Line Drawing Algorithm ---
+// This version respects the original x1,y1 -> x2,y2 direction.
 void drawLineBruteForce(Display* display, Window window, GC gc, int x1, int y1, int x2, int y2) {
     int dx = x2 - x1;
     int dy = y2 - y1;
 
-    // A simple implementation of the brute-force algorithm iterates over the x-axis.
-    // This creates gaps in steep lines (where |dy| > |dx|).
-    // To fix this, we check which delta is larger and iterate over that axis.
+    // Determine which axis has a larger range
     if (abs(dx) > abs(dy)) {
-        // --- Iterate over x-axis (slope is gentle, |m| <= 1) ---
-
-        // Ensure we always draw from left to right
-        if (x1 > x2) {
-            swap(x1, x2);
-            swap(y1, y2);
-        }
-
+        // --- Iterate along the X-axis ---
         float m = (float)dy / (float)dx;
-        for (int x = x1; x <= x2; ++x) {
-            float y = y1 + m * (x - x1);
-            XDrawPoint(display, window, gc, x, round(y));
+        int x_step = (dx > 0) ? 1 : -1;
+        
+        int current_x = x1;
+        while (true) {
+            float y = y1 + m * (current_x - x1);
+            XDrawPoint(display, window, gc, current_x, round(y));
+            
+            if (current_x == x2) break; // Reached the end point
+            current_x += x_step;
         }
     } else {
-        // --- Iterate over y-axis (slope is steep, |m| > 1) ---
-
-        // Ensure we always draw from bottom to top (in screen coordinates)
-        if (y1 > y2) {
-            swap(x1, x2);
-            swap(y1, y2);
-        }
-        
-        // Handle vertical line case to avoid division by zero
+        // --- Iterate along the Y-axis ---
+        // Handle vertical lines separately to avoid division by zero
         if (dy == 0) {
-             if(dx == 0) { // It's a single point
+            if (dx == 0) { // It's a single point
                 XDrawPoint(display, window, gc, x1, y1);
-             }
-             return; // Or handle as a horizontal line if dx !=0, but the other branch catches that
+            }
+            // If dx != 0, it's a horizontal line, handled by the other branch
+            return;
         }
 
-        float m_inv = (float)dx / (float)dy; // Inverse slope
-        for (int y = y1; y <= y2; ++y) {
-            float x = x1 + m_inv * (y - y1);
-            XDrawPoint(display, window, gc, round(x), y);
+        float m_inv = (float)dx / (float)dy;
+        int y_step = (dy > 0) ? 1 : -1;
+        
+        int current_y = y1;
+        while (true) {
+            float x = x1 + m_inv * (current_y - y1);
+            XDrawPoint(display, window, gc, round(x), current_y);
+            
+            if (current_y == y2) break; // Reached the end point
+            current_y += y_step;
         }
     }
 }
 
 
-// General 3D wireframe drawing (now uses our brute-force function)
+// General 3D wireframe drawing (uses our brute-force function)
 void drawEdges(Display* display, Window window, GC gc,
                const vector<Point3D>& vertices,
                const vector<pair<int, int>>& edges,
@@ -113,7 +109,6 @@ void drawEdges(Display* display, Window window, GC gc,
         int p2_screen_x = static_cast<int>(p2_rot_x + posX);
         int p2_screen_y = static_cast<int>(p2_rot_y + posY);
 
-        // --- MODIFIED: Call our new function instead of XDrawLine ---
         drawLineBruteForce(display, window, gc,
                            p1_screen_x, p1_screen_y,
                            p2_screen_x, p2_screen_y);
@@ -175,7 +170,7 @@ int main() {
         // Clear window
         XClearWindow(display, window);
 
-        // --- MODIFIED: Draw user lines with our new function ---
+        // Draw user lines with our new function
         for (const auto& line : user_lines) {
             drawLineBruteForce(display, window, gc, line.x1, line.y1, line.x2, line.y2);
         }
@@ -187,7 +182,7 @@ int main() {
         if (cube_x <= 40 || cube_x >= 560) cube_dx *= -1;
         if (cube_y <= 40 || cube_y >= 560) cube_dy *= -1;
 
-        // Draw cube and spine (these now use drawLineBruteForce via drawEdges)
+        // Draw cube and spine
         drawEdges(display, window, gc, cube_vertices, cube_edges, angle, cube_x, cube_y);
         drawEdges(display, window, gc, rayquaza_spine_vertices, rayquaza_spine_edges, -angle * 0.5f, spine_x, spine_y);
 
