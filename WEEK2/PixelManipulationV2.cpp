@@ -153,10 +153,12 @@ int main() {
                 if (!has_start_point) {
                     start_x = event.xbutton.x;
                     start_y = event.xbutton.y;
+                    cout << "Start point set to: (" << start_x << ", " << start_y << ")" << endl;
                     has_start_point = true;
                 } else {
                     int end_x = event.xbutton.x;
                     int end_y = event.xbutton.y;
+                    cout << "End point set to: (" << end_x << ", " << end_y << ")" << endl;
                     user_lines.push_back({start_x, start_y, end_x, end_y});
                     has_start_point = false;
                 }
